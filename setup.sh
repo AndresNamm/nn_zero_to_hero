@@ -1,0 +1,3 @@
+pip install graphviz
+sudo apt-get update
+sudo apt-get install graphviz
