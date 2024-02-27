@@ -26,10 +26,8 @@ def get_one_hot_vectors(target_word,context_words,vocab_size,word_to_index):
 
 #Note : Below comments for trgt_word_index, ctxt_word_index are with the above sample text for understanding the code flow
 
-def generate_training_data(corpus,window_size,vocab_size,word_to_index,length_of_corpus,sample=None):
-
+def generate_training_data(corpus,window_size,vocab_size,word_to_index,length_of_corpus):
     training_data =  []
-    training_sample_words =  []
     for i,word in enumerate(corpus):
 
         index_target_word = i
@@ -68,10 +66,9 @@ def generate_training_data(corpus,window_size,vocab_size,word_to_index,length_of
         trgt_word_vector,ctxt_word_vector = get_one_hot_vectors(target_word,context_words,vocab_size,word_to_index)
         training_data.append([trgt_word_vector,ctxt_word_vector])   
         
-        if sample is not None:
-            training_sample_words.append([target_word,context_words])   
+
         
-    return training_data,training_sample_words
+    return training_data
 
 
 

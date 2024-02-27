@@ -204,3 +204,10 @@ class MLP:
     def parameters(self):
         return [parameter for layer in self.layers for parameter in layer.parameters()]#
 
+    def represent(self):
+        for idx,layer in enumerate(self.layers):
+            print(f"Layer: {idx}")
+            print(f"Has {len(layer.neurons)} neurons")
+            print(f"Each neuron has {len(layer.neurons[0].w)+1} inputs")
+            print()
+            
