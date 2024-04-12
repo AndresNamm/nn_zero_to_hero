@@ -21,8 +21,12 @@ def main():
     iterations = args.iterations
     batch_size = args.batch_size
 
+    with open('data/names.txt', encoding='utf-8') as f:
+        names = f.readlines()
+        names = [name.strip() for name in names]
 
-    X,Y = generate_training_data(context_size,False)
+
+    X,Y = generate_training_data(names,context_size,False)
     # print shape of X and Y
     print("Shape of X:", X.shape)
     print("Shape of Y:", Y.shape)

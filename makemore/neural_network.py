@@ -36,10 +36,10 @@ class NeuralNetwork:
         
         # meta flags
         self.losses = []
+        self.loss_iterations=[]
+        self.total_iterations = 0
         self.print_flag = print_flag
 
-        
-        
         
         param_count = sum([p.nelement()  for p in self.params])
         
@@ -57,15 +57,38 @@ class NeuralNetwork:
         for p in self.params:
             p.requires_grad=True
 
+    @staticmethod
+    def sigmoid(logits):
+        counts=logits.exp()
+        return counts/counts.sum()
 
 
 
+    def generate_name(self):
+        context_idx = self.context_size * [0]
+        predicted_idx=-1
+        name=[]
+        while predicted_idx!=0:
+            probabilities = NeuralNetwork.sigmoid(((self.c[context_idx].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
+            predicted_idx=probabilities.argmax().item()
+            context_idx = context_idx[1:] + predicted_idx
+            name.append(predicted_idx)
+        return name
+
+    def calculate_loss(self, X,Y):
+        return F.cross_entropy((self.c[X].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1 ).tanh() @ self.w2 + self.b2,Y)
 
     def train(self, X,Y, training_params: TrainingParams):
+        # Check X
+        assert X.shape[1] == self.context_size
+        # Check Y
+        assert len(Y.shape) == 1
+
         # print color green 
         if self.print_flag:
             print("\033[92m" + f"Start training" + "\033[0m")
         for i in range(training_params.iterations):
+            self.total_iterations += 1
             minibatch = torch.randint(0,X.shape[0],(training_params.batch_size,))          
             h = (self.c[X[minibatch]].view(-1, self.context_size * self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh()
             logits = h @ self.w2 + self.b2
@@ -78,14 +101,15 @@ class NeuralNetwork:
 
             learning_rate = training_params.learning_rate(i)
 
-            if i % 100==0:
+            if i % int(training_params.iterations/3)==0:
                 # Calculate total loss
                 total_h = (self.c[X].view(-1,self.context_size*self.letter_embedding_dimensions)  @ self.w1 + self.b1).tanh()
                 total_logits = total_h @ self.w2 + self.b2
                 total_loss = F.cross_entropy(total_logits, Y)
                 self.losses.append(total_loss)
-
-
+                self.loss_iterations.append(self.total_iterations)
+                if self.print_flag:
+                    print(f"Loss after {self.total_iterations} epochs: {total_loss}")
                 
             for param in self.params: 
                 param.data -= param.grad * learning_rate #type: ignore

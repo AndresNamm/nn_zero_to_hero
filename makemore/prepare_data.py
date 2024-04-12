@@ -1,6 +1,6 @@
 import torch
 
-def generate_training_data(block_size=3, print_out=False):
+def generate_training_data(names=["John","Jane","Jim","Jill","Jack","Jenny"], context_size=3,print_out=False) -> tuple:
     """
     Generate training data for a neural network model.
 
@@ -12,10 +12,6 @@ def generate_training_data(block_size=3, print_out=False):
         torch.Tensor: The input data (X) as a tensor.
         torch.Tensor: The target data (Y) as a tensor.
     """
-    with open('data/names.txt', encoding='utf-8') as f:
-        names = f.readlines()
-        names = [name.strip() for name in names]
-
     itos = {}
     stoi = {}
 
@@ -33,7 +29,7 @@ def generate_training_data(block_size=3, print_out=False):
 
     for name in names:
         name = name + "."
-        context = block_size * [0]
+        context = context_size * [0]
         if print_out:
             print(name)
         for ch in name:
