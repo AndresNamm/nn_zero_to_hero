@@ -69,9 +69,11 @@ class NeuralNetwork:
         predicted_idx=-1
         name=[]
         while predicted_idx!=0:
-            probabilities = NeuralNetwork.sigmoid(((self.c[context_idx].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
-            predicted_idx=probabilities.argmax().item()
-            context_idx = context_idx[1:] + predicted_idx
+            probabilities = NeuralNetwork.sigmoid(((self.c[torch.Tensor(context_idx).int()].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
+            # Choose with some probability the next letter
+
+            predicted_idx=torch.multinomial(probabilities.view(-1),1).item()
+            context_idx = context_idx[1:] + [predicted_idx]
             name.append(predicted_idx)
         return name
 
@@ -116,3 +118,6 @@ class NeuralNetwork:
 
         if self.print_flag:
             print(f"{self.name} loss:after {training_params.iterations} epochs: {self.losses[-1]}")
+
+
+

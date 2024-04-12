@@ -35,5 +35,19 @@ def main():
     training_params = TrainingParams(iterations,batch_size)
     nn.train(X,Y,training_params)
 
+    print(f"Calculating loss... {nn.calculate_loss(X,Y)}")
+    
+
+    itos = {}
+    itos[0] = '.'
+    letters = sorted(list(set("".join(names))))
+    for idx, letter in enumerate(letters):
+        itos[idx + 1] = letter
+
+
+    for i in range(10):
+        name_idxs = nn.generate_name()
+        name_str = "".join([itos[idx] for idx in name_idxs])
+        print(name_str)
 
 main()
