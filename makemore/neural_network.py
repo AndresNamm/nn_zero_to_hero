@@ -16,16 +16,14 @@ class TrainingParams:
 class NeuralNetwork:
 
 
-    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True):
-
-
+    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647):
 
         self.context_size = context_size
         self.hidden_layer_neurons = hidden_layer_neurons
         self.letter_embedding_dimensions = letter_embedding_dimensions
         self.name = f"NN_{context_size}_{hidden_layer_neurons}_{letter_embedding_dimensions}"   
 
-        self.g = torch.Generator().manual_seed(2147483647)
+        self.g = torch.Generator().manual_seed(generator_seed)
         self.c = torch.randn(27,self.letter_embedding_dimensions,generator=self.g) 
         self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
         self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
@@ -57,8 +55,9 @@ class NeuralNetwork:
         for p in self.params:
             p.requires_grad=True
 
-    @staticmethod
-    def sigmoid(logits):
+    @staticmethod 
+    # https://en.wikipedia.org/wiki/Softmax_function
+    def softmax(logits):
         counts=logits.exp()
         return counts/counts.sum()
 
@@ -69,7 +68,7 @@ class NeuralNetwork:
         predicted_idx=-1
         name=[]
         while predicted_idx!=0:
-            probabilities = NeuralNetwork.sigmoid(((self.c[torch.Tensor(context_idx).int()].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
+            probabilities = NeuralNetwork.softmax(((self.c[torch.Tensor(context_idx).int()].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
             # Choose with some probability the next letter
 
             predicted_idx=torch.multinomial(probabilities.view(-1),1).item()

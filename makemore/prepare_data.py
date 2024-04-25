@@ -1,4 +1,23 @@
 import torch
+from dataclasses import dataclass
+
+
+@dataclass
+class CharacterMapping:
+    stoi: dict
+    itos: dict
+    vocab_size: int
+
+def generate_character_mapping(names=["John","Jane","Jim","Jill","Jack","Jenny"]) -> CharacterMapping:	    
+    # build the vocabulary of characters and mappings to/from integers
+    chars = sorted(list(set(''.join(names))))
+    stoi = {s:i+1 for i,s in enumerate(chars)}
+    stoi['.'] = 0
+    itos = {i:s for s,i in stoi.items()}
+    vocab_size = len(itos)
+    return CharacterMapping(stoi,itos,vocab_size)
+
+
 
 def generate_training_data(names=["John","Jane","Jim","Jill","Jack","Jenny"], context_size=3,print_out=False) -> tuple:
     """
@@ -12,17 +31,10 @@ def generate_training_data(names=["John","Jane","Jim","Jill","Jack","Jenny"], co
         torch.Tensor: The input data (X) as a tensor.
         torch.Tensor: The target data (Y) as a tensor.
     """
-    itos = {}
-    stoi = {}
-
-    itos[0] = '.'
-    stoi['.'] = 0
-
-    letters = sorted(list(set("".join(names))))
-
-    for idx, letter in enumerate(letters):
-        stoi[letter] = idx + 1
-        itos[idx + 1] = letter
+    character_mapping = generate_character_mapping(names)
+    
+    stoi = character_mapping.stoi
+    itos = character_mapping.itos
 
     X = []
     Y = []
