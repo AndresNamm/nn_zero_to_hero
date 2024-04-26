@@ -2,6 +2,7 @@ from typing import Callable
 from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 
 
 
@@ -12,11 +13,10 @@ class TrainingParams:
     learning_rate: Callable[[int],float] = lambda x: 1.0
 
 
-
 class NeuralNetwork:
 
 
-    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647):
+    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647, bad_initialization=False):
 
         self.context_size = context_size
         self.hidden_layer_neurons = hidden_layer_neurons
@@ -27,8 +27,13 @@ class NeuralNetwork:
         self.c = torch.randn(27,self.letter_embedding_dimensions,generator=self.g) 
         self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
         self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
-        self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g)
-        self.b2 = torch.randn(27) # Add to every neuron bias
+        if bad_initialization:
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) 
+            self.b2 = torch.randn(27,generator=self.g) # Add to every neuron bias 
+        else:
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01
+            self.b2 = torch.zeros(27) # Add to every neuron bias 
+
 
         self.params = [self.c,self.w1,self.b1,self.w2,self.b2]
         
@@ -68,7 +73,10 @@ class NeuralNetwork:
         predicted_idx=-1
         name=[]
         while predicted_idx!=0:
-            probabilities = NeuralNetwork.softmax(((self.c[torch.Tensor(context_idx).int()].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2))        
+            logits: Tensor = ((self.c[torch.Tensor(context_idx).int()].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh() @ self.w2 + self.b2)
+            probabilities_manual = NeuralNetwork.softmax(logits) 
+            probabilities = torch.softmax(logits,1) # Runs softmax column level
+            assert probabilities.allclose(probabilities_manual)
             # Choose with some probability the next letter
 
             predicted_idx=torch.multinomial(probabilities.view(-1),1).item()
@@ -107,11 +115,13 @@ class NeuralNetwork:
                 total_h = (self.c[X].view(-1,self.context_size*self.letter_embedding_dimensions)  @ self.w1 + self.b1).tanh()
                 total_logits = total_h @ self.w2 + self.b2
                 total_loss = F.cross_entropy(total_logits, Y)
-                self.losses.append(total_loss)
-                self.loss_iterations.append(self.total_iterations)
+
                 if self.print_flag:
                     print(f"Loss after {self.total_iterations} epochs: {total_loss}")
-                
+
+            self.losses.append(loss.item())
+            self.loss_iterations.append(self.total_iterations)
+
             for param in self.params: 
                 param.data -= param.grad * learning_rate #type: ignore
 
