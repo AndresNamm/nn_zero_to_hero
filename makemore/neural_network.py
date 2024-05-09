@@ -28,12 +28,11 @@ class NeuralNetwork:
         self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
         self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
         if bad_initialization:
-            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) 
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) # 
             self.b2 = torch.randn(27,generator=self.g) # Add to every neuron bias 
         else:
-            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01
-            self.b2 = torch.zeros(27) # Add to every neuron bias 
-
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01 # make each weight smaller so we would not be confidently wrong.
+            self.b2 = torch.zeros(27) # Add to every neuron bias -- set it initialy to 0 to again avoid being confidently wrong.
 
         self.params = [self.c,self.w1,self.b1,self.w2,self.b2]
         
@@ -45,8 +44,6 @@ class NeuralNetwork:
 
         
         param_count = sum([p.nelement()  for p in self.params])
-        
-
 
         if self.print_flag:
             print("Shape of c:", self.c.shape)
@@ -92,7 +89,6 @@ class NeuralNetwork:
         assert X.shape[1] == self.context_size
         # Check Y
         assert len(Y.shape) == 1
-
         # print color green 
         if self.print_flag:
             print("\033[92m" + f"Start training" + "\033[0m")
