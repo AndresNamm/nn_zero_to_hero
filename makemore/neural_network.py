@@ -3,6 +3,14 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+import enum
+
+
+class InitializationType(enum.Enum):
+    no_fixes = "no fixes"
+    avoid_being_confidently_wrong = "avoid being confidently_wrong"
+    squash_h = "squash h"
+
 
 
 
@@ -16,7 +24,7 @@ class TrainingParams:
 class NeuralNetwork:
 
 
-    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647, bad_initialization=False):
+    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647, initialization_type: InitializationType = InitializationType.squash_h):
 
         self.context_size = context_size
         self.hidden_layer_neurons = hidden_layer_neurons
@@ -27,10 +35,18 @@ class NeuralNetwork:
         self.c = torch.randn(27,self.letter_embedding_dimensions,generator=self.g) 
         self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
         self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
-        if bad_initialization:
+
+        if initialization_type == InitializationType.no_fixes:
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) # 
             self.b2 = torch.randn(27,generator=self.g) # Add to every neuron bias 
-        else:
+        elif initialization_type == InitializationType.avoid_being_confidently_wrong:
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01 # make each weight smaller so we would not be confidently wrong.
+            self.b2 = torch.zeros(27) # Add to every neuron bias -- set it initialy to 0 to again avoid being confidently wrong.
+        elif initialization_type == InitializationType.squash_h:
+            self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g) * 0.01
+            self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) * 0.01 
+            # Changing w1 and b1 to smaller numbers avoids h1 becoming too large which intself would make tanh go to 1 which would make
+            # the specific neuron to not be able to learn based on some training examples.
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01 # make each weight smaller so we would not be confidently wrong.
             self.b2 = torch.zeros(27) # Add to every neuron bias -- set it initialy to 0 to again avoid being confidently wrong.
 
@@ -63,8 +79,6 @@ class NeuralNetwork:
         counts=logits.exp()
         return counts/counts.sum()
 
-
-
     def generate_name(self):
         context_idx = self.context_size * [0]
         predicted_idx=-1
@@ -84,7 +98,7 @@ class NeuralNetwork:
     def calculate_loss(self, X,Y):
         return F.cross_entropy((self.c[X].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1 ).tanh() @ self.w2 + self.b2,Y)
 
-    def train(self, X,Y, training_params: TrainingParams):
+    def train(self, X,Y, training_params: TrainingParams=TrainingParams(iterations=1000, batch_size=30, learning_rate=lambda x: 0.1)):
         # Check X
         assert X.shape[1] == self.context_size
         # Check Y
