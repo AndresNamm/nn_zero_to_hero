@@ -10,6 +10,7 @@ class InitializationType(enum.Enum):
     no_fixes = "no fixes"
     avoid_being_confidently_wrong = "avoid being confidently_wrong"
     squash_h = "squash h"
+    kaiming_tanh = "kaiming_tanh"
 
 
 
@@ -42,7 +43,6 @@ class NeuralNetwork:
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) # 
             self.b2 = torch.randn(27,generator=self.g) # Add to every neuron bias 
         elif initialization_type == InitializationType.avoid_being_confidently_wrong:
-
             self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
             self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01 # make each weight smaller so we would not be confidently wrong.
@@ -53,6 +53,16 @@ class NeuralNetwork:
             # Changing w1 and b1 to smaller numbers avoids h1 becoming too large which intself would make tanh go to 1 which would make
             # the specific neuron to not be able to learn based on some training examples.
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01 # make each weight smaller so we would not be confidently wrong.
+            self.b2 = torch.zeros(27) # Add to every neuron bias -- set it initialy to 0 to again avoid being confidently wrong.
+        elif initialization_type == InitializationType.kaiming_tanh:
+            # https://www.geeksforgeeks.org/kaiming-initialization-in-deep-learning/
+            # https://www.youtube.com/watch?v=P6sfmUTpUmc&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=4&t=1673s
+            self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g) * ((5/3)/(self.letter_embedding_dimensions*self.context_size)**0.5)
+            print(f"Kaiming normalizer: {((5/3)/(self.letter_embedding_dimensions*self.context_size)**0.5)}" )
+            self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) * 0.01 
+            # Changing w1 and b1 to smaller numbers avoids h1 becoming too large which intself would make tanh go to 1 which would make
+            # the specific neuron to not be able to learn based on some training examples.
+            self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) * 0.01
             self.b2 = torch.zeros(27) # Add to every neuron bias -- set it initialy to 0 to again avoid being confidently wrong.
         else:
             print("else")
