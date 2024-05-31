@@ -25,7 +25,7 @@ class TrainingParams:
 class NeuralNetwork:
 
 
-    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647, initialization_type: InitializationType = InitializationType.squash_h):
+    def __init__(self, context_size:int = 3, hidden_layer_neurons: int = 100, letter_embedding_dimensions: int = 2, print_flag=True, generator_seed=2147483647, initialization_type: InitializationType = InitializationType.kaiming_tanh):
 
         self.context_size = context_size
         self.hidden_layer_neurons = hidden_layer_neurons
@@ -58,7 +58,7 @@ class NeuralNetwork:
             # https://www.geeksforgeeks.org/kaiming-initialization-in-deep-learning/
             # https://www.youtube.com/watch?v=P6sfmUTpUmc&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=4&t=1673s
             self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g) * ((5/3)/(self.letter_embedding_dimensions*self.context_size)**0.5)
-            print(f"Kaiming normalizer: {((5/3)/(self.letter_embedding_dimensions*self.context_size)**0.5)}" )
+            print(f"Kaiming normalizer" )
             self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) * 0.01 
             # Changing w1 and b1 to smaller numbers avoids h1 becoming too large which intself would make tanh go to 1 which would make
             # the specific neuron to not be able to learn based on some training examples.
@@ -115,7 +115,7 @@ class NeuralNetwork:
     def calculate_loss(self, X,Y):
         return F.cross_entropy((self.c[X].view(-1,self.context_size*self.letter_embedding_dimensions) @ self.w1 + self.b1 ).tanh() @ self.w2 + self.b2,Y)
 
-    def train(self, X,Y, training_params: TrainingParams=TrainingParams(iterations=1000, batch_size=30, learning_rate=lambda x: 0.1)):
+    def train(self, X,Y, training_params: TrainingParams=TrainingParams(iterations=1000, batch_size=30, learning_rate=lambda x: 0.1), batch_normalization=True):
         # Check X
         assert X.shape[1] == self.context_size
         # Check Y
@@ -125,8 +125,16 @@ class NeuralNetwork:
             print("\033[92m" + f"Start training" + "\033[0m")
         for i in range(training_params.iterations):
             self.total_iterations += 1
-            minibatch = torch.randint(0,X.shape[0],(training_params.batch_size,))          
-            h = (self.c[X[minibatch]].view(-1, self.context_size * self.letter_embedding_dimensions) @ self.w1 + self.b1).tanh()
+            minibatch = torch.randint(0,X.shape[0],(training_params.batch_size,))
+            hpreact = (self.c[X[minibatch]].view(-1, self.context_size * self.letter_embedding_dimensions) @ self.w1 + self.b1)   
+
+            hpmean = hpreact.mean(0, keepdim=True) 
+            hpstd = hpreact.std(0, keepdim=True)   
+               
+            if batch_normalization:
+                h = ((hpreact - hpmean)**2/ (hpstd**2 + 1e-6)).tanh()
+            else:
+                h = hpreact.tanh()
             logits = h @ self.w2 + self.b2
             loss = F.cross_entropy(logits, Y[minibatch])
 
