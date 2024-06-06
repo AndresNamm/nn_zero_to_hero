@@ -37,7 +37,6 @@ class NeuralNetwork:
 
 
         if initialization_type == InitializationType.no_fixes:
-
             self.w1 = torch.randn(self.letter_embedding_dimensions*self.context_size,self.hidden_layer_neurons,generator=self.g)
             self.b1 = torch.randn(self.hidden_layer_neurons,generator=self.g) # Add to every neuron bias
             self.w2 = torch.randn(self.hidden_layer_neurons,27,generator=self.g) # 
@@ -128,13 +127,8 @@ class NeuralNetwork:
             minibatch = torch.randint(0,X.shape[0],(training_params.batch_size,))
             hpreact = (self.c[X[minibatch]].view(-1, self.context_size * self.letter_embedding_dimensions) @ self.w1 + self.b1)   
 
-            hpmean = hpreact.mean(0, keepdim=True) 
-            hpstd = hpreact.std(0, keepdim=True)   
                
-            if batch_normalization:
-                h = ((hpreact - hpmean)**2/ (hpstd**2 + 1e-6)).tanh()
-            else:
-                h = hpreact.tanh()
+            h = hpreact.tanh()
             logits = h @ self.w2 + self.b2
             loss = F.cross_entropy(logits, Y[minibatch])
 
